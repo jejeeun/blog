@@ -8,10 +8,10 @@ tags: [opentelemetry, zipkin, spring-boot, prometheus, observability, microservi
 pin: true
 math: false
 mermaid: true
-image:
-  path: /assets/img/posts/openapi-observability-architecture.png
-  lqip: data:image/webp;base64,UklGRpoAAABXRUJQVlA4WAoAAAAQAAAADwAABwAAQUxQSDIAAAARL0AmbZurmr57yyIiqE8oiG0bejIYEQTgqiDA9vqnsUSI6H+oAERp2HZ65qP/VIAWAFZQOCBCAAAA8AEAnQEqEAAIAAVAfCWkAALp8sF8rgRgAP7o9FDvMCkMde9PK7euH5M1m6VWoDXf2FkP3BqV0ZYbO6NA/VFIAAAA
-  alt: OpenAPI 시스템을 위한 OpenTelemetry 분산 트레이싱 아키텍처
+# image:
+#   path: /assets/img/posts/openapi-observability-architecture.png
+#   lqip: data:image/webp;base64,UklGRpoAAABXRUJQVlA4WAoAAAAQAAAADwAABwAAQUxQSDIAAAARL0AmbZurmr57yyIiqE8oiG0bejIYEQTgqiDA9vqnsUSI6H+oAERp2HZ65qP/VIAWAFZQOCBCAAAA8AEAnQEqEAAIAAVAfCWkAALp8sF8rgRgAP7o9FDvMCkMde9PK7euH5M1m6VWoDXf2FkP3BqV0ZYbO6NA/VFIAAAA
+#   alt: OpenAPI 시스템을 위한 OpenTelemetry 분산 트레이싱 아키텍처
 ---
 
 ## 들어가며
