@@ -68,14 +68,14 @@ graph TB
 
 ### OpenAPI 시스템 확장 요구사항
 
-새로 구축하게 된 OpenAPI 시스템은 기존 인프라 중심 모니터링으로는 충분히 관측하기 어려운 특성을 가졌습니다:
+새로 구축하게 된 OpenAPI 시스템은 기존 인프라 중심 모니터링과는 완전히 다른 접근이 필요했습니다:
 
-- **복잡한 서비스 의존성**: API Gateway → Auth Service → Business Service → External API 호출의 다단계 처리
+- **애플리케이션 중심 관측성**: API Gateway → Auth Service → Business Service → External API 호출 체인의 각 구간별 상세 추적 필요
 - **높은 가용성 요구**: OpenAPI 장애가 곧 고객사 서비스 중단으로 이어지는 크리티컬한 시스템
-- **다양한 호출 패턴**: 동기/비동기 호출, 배치 처리, 이벤트 기반 처리 등 복합적인 아키텍처
-- **애플리케이션 레벨 병목**: 기존 Node Exporter, Process Exporter로는 파악할 수 없는 비즈니스 로직 내부의 성능 이슈
+- **통합 대시보드 요구사항**: 기존 백오피스 시스템에서 바로 모니터링 정보를 확인하고 싶은 요구
+- **관리포인트 최소화**: Grafana 같은 별도 도구 추가로 인한 관리 복잡도 증가 회피
 
-> 기존 인프라 메트릭으로는 "서버는 정상, DB도 정상, 프로세스도 정상"인 상황에서 실제 사용자 요청이 느려지는 원인을 찾기 어려웠습니다.
+> **핵심 결정사항**: "인프라는 정상인데 API가 느린 이유를 모르겠다"는 상황을 해결하기 위해 애플리케이션 레벨에서 모든 것을 관측하기로 결정했습니다.
 {: .prompt-warning }
 
 ---
@@ -84,48 +84,49 @@ graph TB
 
 ### 확장된 모니터링 아키텍처 설계
 
-기존 인프라 레벨 Prometheus 모니터링을 유지하면서 애플리케이션 레벨 관측성 기능을 추가하는 방향으로 설계했습니다:
+OpenAPI 시스템에서는 기존 인프라 익스포터 방식을 **완전히 탈피**하고 OpenTelemetry 기반 애플리케이션 중심 관측성으로 전환했습니다:
 
 ```mermaid
 graph TB
-    subgraph "기존 Infrastructure Monitoring (유지)"
+    subgraph "기존 Infrastructure Monitoring (기존 시스템 유지)"
         I1[Node Exporter]
-        I2[MySQLd Exporter]
+        I2[MySQLd Exporter] 
         I3[Process Exporter]
         I4[Redis Exporter]
         I5[Push Gateway]
+        I1 --> P1[Prometheus]
+        I2 --> P1
+        I3 --> P1
+        I4 --> P1
+        I5 --> P1
+        P1 --> G1[Grafana]
     end
     
-    subgraph "새로운 Application Observability"
-        A[A-Service<br/>OpenTelemetry Java Agent<br/>Spring Boot Starter]
-        B[B-Service<br/>OpenTelemetry Java Agent<br/>Spring Boot Starter]
-        C[C-Service<br/>OpenTelemetry Java Agent<br/>Spring Boot Starter]
+    subgraph "새로운 OpenAPI System"
+        A[API Gateway<br/>OpenTelemetry Java Agent]
+        B[Auth Service<br/>OpenTelemetry Java Agent]
+        C[Business Service<br/>OpenTelemetry Java Agent]
+        D[External Service<br/>OpenTelemetry Java Agent]
     end
     
-    I1 --> P[Prometheus<br/>기존 + 새로운 메트릭]
-    I2 --> P
-    I3 --> P
-    I4 --> P
-    I5 --> P
+    A --> OC[OpenTelemetry Collector]
+    B --> OC
+    C --> OC  
+    D --> OC
     
-    A --> D[OpenTelemetry Collector]
-    B --> D
-    C --> D
+    OC --> Z[Zipkin<br/>Traces]
+    OC --> P2[Prometheus<br/>OTel Metrics Exporter]
+    OC --> L[Logstash<br/>Logs]
     
-    D --> E[Zipkin<br/>Traces]
-    D --> P
-    D --> G[Logstash<br/>Logs]
+    L --> E[Elasticsearch]
     
-    G --> H[Elasticsearch]
-    
-    E --> J[Vue.js Web Dashboard]
-    P --> K[Grafana<br/>기존 대시보드 유지]
-    P --> J
-    H --> J
+    Z --> V[Vue.js 백오피스<br/>통합 대시보드]
+    P2 --> V
+    E --> V
 ```
 
-> 기존 인프라 모니터링 시스템을 그대로 유지하면서 애플리케이션 레벨의 관측성만 새롭게 추가하는 점진적 확장 방식을 채택했습니다.
-{: .prompt-tip }
+> OpenAPI 시스템에서는 **인프라 익스포터를 완전히 제거**하고 애플리케이션 레벨에서 모든 관측 데이터를 수집하도록 전환했습니다.
+{: .prompt-info }
 
 ### OpenTelemetry 이중 계측 전략
 
@@ -274,11 +275,17 @@ graph LR
 - 단일 컨테이너 운영으로 운영 복잡도 최소화
 - 메모리 사용량이 Jaeger 대비 약 40% 적음
 
-#### Prometheus 유지 이유
-- **기존 인프라 모니터링 연속성**: Node Exporter, MySQLd Exporter 등 기존 익스포터 기반 모니터링 시스템과의 일관성 유지
-- **운영 노하우 보존**: 기존 Process Exporter를 통한 애플리케이션 프로세스 모니터링 경험과 알러트 룰 재활용
-- **Grafana 대시보드 자산 활용**: 기존에 구축된 인프라 대시보드와 새로운 애플리케이션 메트릭의 통합 가능
-- **점진적 전환**: 기존 Push Gateway를 통한 배치 작업 모니터링을 유지하면서 새로운 트레이싱 기능 추가
+#### Vue.js 백오피스 통합 선택 이유
+- **관리포인트 최소화**: Grafana 추가 시 또 다른 시스템 관리 부담 발생
+- **사용자 경험 일관성**: 기존 백오피스에서 OpenAPI 관리와 모니터링을 동시에 처리
+- **빠른 장애 대응**: 백오피스 작업 중 실시간으로 API 상태 확인 가능
+- **접근 권한 통합**: 별도 Grafana 계정 관리 없이 기존 백오피스 권한 체계 활용
+
+#### Prometheus 역할 변경
+- **기존**: 다양한 인프라 익스포터들로부터 직접 메트릭 수집
+- **변경 후**: OpenTelemetry Collector의 Prometheus Exporter를 통해 애플리케이션 메트릭만 수집
+- **유지 이유**: 기존 PromQL 경험과 메트릭 쿼리 노하우 재활용 가능
+- **활용 방법**: Vue.js에서 Prometheus REST API를 통해 직접 메트릭 데이터 조회
 
 #### Logstash 활용 이유
 - 기존 Elasticsearch 인프라 활용
@@ -350,38 +357,65 @@ service:
 ```
 {: file='docker/otel-collector-config.yaml'}
 
-### Vue.js 대시보드 통합
+### Vue.js 백오피스 통합 대시보드
 
-기존 Vue.js 관리 시스템에 트레이싱 기능을 통합했습니다:
+기존 백오피스 시스템에 모니터링 기능을 직접 통합하여 관리포인트를 최소화했습니다:
 
 ```javascript
-// Zipkin API 연동
-export class TracingService {
+// 백오피스에 통합된 모니터링 서비스
+export class IntegratedMonitoringService {
   constructor() {
     this.zipkinBaseUrl = process.env.VUE_APP_ZIPKIN_URL;
     this.prometheusBaseUrl = process.env.VUE_APP_PROMETHEUS_URL;
+    this.elasticsearchBaseUrl = process.env.VUE_APP_ES_URL;
   }
   
-  // 특정 서비스의 최근 트레이스 조회
-  async getRecentTraces(serviceName, limit = 100) {
-    const endTime = Date.now() * 1000; // microseconds
-    const startTime = endTime - (24 * 60 * 60 * 1000 * 1000); // 24시간 전
+  // OpenAPI 서비스별 실시간 상태 확인 (백오피스 메인 화면용)
+  async getOpenAPIServiceStatus() {
+    const services = ['api-gateway', 'auth-service', 'business-service'];
+    const statusData = {};
     
-    const response = await fetch(
-      `${this.zipkinBaseUrl}/api/v2/traces?serviceName=${serviceName}&endTs=${endTime}&lookback=${startTime}&limit=${limit}`
+    for (const service of services) {
+      // Prometheus에서 각 서비스의 에러율과 응답시간 조회
+      const errorRateQuery = `rate(http_requests_total{job="${service}",status=~"5.."}[5m])`;
+      const latencyQuery = `histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="${service}"}[5m]))`;
+      
+      const [errorRate, latency] = await Promise.all([
+        this.queryPrometheus(errorRateQuery),
+        this.queryPrometheus(latencyQuery)
+      ]);
+      
+      statusData[service] = {
+        errorRate: errorRate.data.result[0]?.value[1] || 0,
+        p95Latency: latency.data.result[0]?.value[1] || 0,
+        status: this.determineServiceStatus(errorRate, latency)
+      };
+    }
+    
+    return statusData;
+  }
+  
+  // 특정 API 엔드포인트의 상세 트레이스 분석 (OpenAPI 관리 화면용)
+  async getAPIEndpointAnalysis(endpoint, timeRange = '1h') {
+    // Zipkin에서 해당 엔드포인트의 최근 트레이스 조회
+    const traces = await this.getRecentTraces('api-gateway', 100);
+    const endpointTraces = traces.filter(trace => 
+      trace.some(span => span.tags['http.url']?.includes(endpoint))
     );
-    return response.json();
+    
+    // 성능 분석 데이터 생성
+    const analysis = {
+      totalRequests: endpointTraces.length,
+      avgDuration: this.calculateAverageDuration(endpointTraces),
+      errorCount: endpointTraces.filter(trace => this.hasError(trace)).length,
+      slowestTrace: this.findSlowestTrace(endpointTraces),
+      bottleneckServices: this.identifyBottlenecks(endpointTraces)
+    };
+    
+    return analysis;
   }
   
-  // 특정 TraceId로 상세 트레이스 조회
-  async getTraceDetail(traceId) {
-    const response = await fetch(`${this.zipkinBaseUrl}/api/v2/trace/${traceId}`);
-    return response.json();
-  }
-  
-  // Prometheus에서 에러율 메트릭 조회
-  async getErrorRate(serviceName, timeRange = '1h') {
-    const query = `rate(http_requests_total{job="${serviceName}",status=~"5.."}[5m])`;
+  async queryPrometheus(query) {
     const response = await fetch(
       `${this.prometheusBaseUrl}/api/v1/query?query=${encodeURIComponent(query)}`
     );
@@ -389,7 +423,70 @@ export class TracingService {
   }
 }
 ```
-{: file='src/services/TracingService.js'}
+{: file='src/services/IntegratedMonitoringService.js'}
+
+**백오피스 컴포넌트 통합 예시**:
+
+```vue
+<template>
+  <div class="openapi-management">
+    <!-- 기존 OpenAPI 관리 기능 -->
+    <div class="api-management-section">
+      <h2>OpenAPI 엔드포인트 관리</h2>
+      <!-- API 등록/수정/삭제 기능 -->
+    </div>
+    
+    <!-- 통합된 모니터링 대시보드 -->
+    <div class="monitoring-section">
+      <h2>실시간 API 상태</h2>
+      <div class="service-status-grid">
+        <div v-for="(status, service) in serviceStatus" :key="service" 
+             :class="`status-card ${status.status}`">
+          <h3>{{ service }}</h3>
+          <p>에러율: {{ (status.errorRate * 100).toFixed(2) }}%</p>
+          <p>P95 지연시간: {{ status.p95Latency }}ms</p>
+          <button @click="openTraceDetail(service)">상세 분석</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { IntegratedMonitoringService } from '@/services/IntegratedMonitoringService';
+
+export default {
+  name: 'OpenAPIManagement',
+  data() {
+    return {
+      serviceStatus: {},
+      monitoring: new IntegratedMonitoringService()
+    };
+  },
+  async mounted() {
+    // 기존 OpenAPI 관리 데이터 로드
+    await this.loadAPIEndpoints();
+    
+    // 실시간 모니터링 데이터 로드
+    await this.loadServiceStatus();
+    
+    // 30초마다 상태 갱신
+    setInterval(this.loadServiceStatus, 30000);
+  },
+  methods: {
+    async loadServiceStatus() {
+      this.serviceStatus = await this.monitoring.getOpenAPIServiceStatus();
+    },
+    
+    async openTraceDetail(service) {
+      // 모달이나 새 탭에서 해당 서비스의 상세 트레이스 분석 화면 오픈
+      this.$router.push(`/monitoring/trace/${service}`);
+    }
+  }
+};
+</script>
+```
+{: file='src/components/OpenAPIManagement.vue'}
 
 ### 주요 기술적 도전과 해결책
 
@@ -516,36 +613,40 @@ output {
 
 #### 사례 1: 외부 API 호출 지연 문제
 
-**기존 접근법 (인프라 모니터링 중심)**:
-1. Grafana에서 Node Exporter 메트릭으로 CPU/메모리 이상 없음 확인
-2. MySQLd Exporter에서 DB 성능 지표 정상 확인
-3. Process Exporter에서 애플리케이션 프로세스 상태 정상 확인
-4. 각 서버별 애플리케이션 로그 파일 수동 검색
-5. 외부 API 호출 로그를 찾기 위해 여러 서비스 로그 분석
-6. **총 소요 시간: 35분**
+**기존 인프라 모니터링 방식의 한계**:
+- Node Exporter: CPU/메모리 정상
+- Process Exporter: 애플리케이션 프로세스 정상  
+- MySQLd Exporter: DB 성능 정상
+- **결론**: "모든 인프라가 정상인데 왜 API가 느린가?" - 35분간 원인 파악 실패
 
-**개선된 접근법 (트레이싱 기반)**:
-1. Zipkin에서 느린 트레이스 필터링
-2. 트레이스 상세 보기에서 외부 API 호출 구간 8초 지연 발견
-3. TraceId로 관련 로그 즉시 필터링하여 API 타임아웃 원인 파악
-4. **총 소요 시간: 3분**
+**OpenTelemetry 기반 해결**:
+1. Vue.js 백오피스에서 API 응답시간 급증 알림 확인
+2. 통합 대시보드에서 해당 엔드포인트의 트레이스 분석 버튼 클릭
+3. Zipkin 트레이스에서 `External API Call` 구간이 8초 소요 발견
+4. TraceId로 Elasticsearch에서 관련 로그 즉시 필터링
+5. **총 소요 시간: 3분** - 외부 API 타임아웃 설정 문제로 확인
 
-> 기존 인프라 메트릭으로는 "시스템은 정상이지만 성능이 느리다"는 상황에서 정확한 병목 지점을 찾기 어려웠습니다.
-{: .prompt-warning }
+> **핵심 차이점**: 인프라는 정상이지만 애플리케이션 레벨에서 발생한 병목을 즉시 파악할 수 있게 되었습니다.
+{: .prompt-tip }
 
-#### 사례 2: 데이터베이스 커넥션 풀 고갈
+#### 사례 2: 인증 서비스 성능 저하
 
-**기존 접근법의 한계**:
-- MySQLd Exporter에서는 DB 자체 성능은 정상으로 표시
-- Process Exporter에서 애플리케이션 메모리 사용량만 모니터링 가능
-- 커넥션 풀 레벨의 세부 정보는 애플리케이션 로그에서만 확인 가능
+**문제 상황**: 
+- OpenAPI 인증 성공률은 정상이지만 전체적인 API 응답시간 증가
+- 기존 방식이었다면 각종 익스포터를 확인했겠지만 모두 정상으로 표시될 상황
 
-**트레이싱 기반 해결**:
-- Zipkin 트레이스에서 DB 호출 구간의 이상 패턴 발견: 특정 시간대 DB Span의 대기 시간이 급증
-- TraceId로 동일 시간대 다른 요청들의 DB 접근 패턴 분석
-- 애플리케이션 레벨에서 커넥션 풀 고갈 현상 즉시 파악하여 설정 조정
+**OpenTelemetry 기반 분석**:
+1. Vue.js 백오피스의 통합 모니터링에서 Auth Service의 P95 지연시간 급증 발견
+2. 해당 서비스 트레이스 상세 분석 화면으로 이동
+3. Zipkin에서 인증 로직 내부의 `Token Validation` 구간에서 병목 발견
+4. OpenTelemetry 메트릭으로 JWT 토큰 검증 과정에서 외부 공개키 조회 API 호출 빈도 증가 확인
+5. **근본 원인**: JWT 공개키 캐싱 TTL 설정 문제로 매번 외부 조회 발생
 
-> 인프라 메트릭으로는 "DB는 정상, 애플리케이션도 정상"이지만 실제로는 애플리케이션-DB 간 연결 레벨에서 문제가 발생한 사례였습니다.
+**해결 효과**:
+- 캐시 TTL 조정으로 인증 성능 90% 개선
+- **발견 시간**: 5분 (기존 방식 대비 85% 단축)
+
+> 인프라 레벨에서는 절대 발견할 수 없는 애플리케이션 로직 내부의 미세한 성능 이슈를 정확히 포착했습니다.
 {: .prompt-info }
 
 ### 비즈니스 임팩트
@@ -597,10 +698,19 @@ output {
 
 ## 마무리
 
-OpenTelemetry 기반 관측성 시스템 구축을 통해 기존 인프라 중심 모니터링의 한계를 극복하고 애플리케이션 레벨의 진정한 관측성을 확보할 수 있었습니다. 특히 기존 Prometheus + 다양한 Exporter 기반 인프라 모니터링을 그대로 유지하면서 새로운 트레이싱 기능을 점진적으로 추가한 접근 방식이 성공의 핵심이었습니다.
+OpenTelemetry 기반 관측성 시스템 구축을 통해 **인프라 중심에서 애플리케이션 중심으로의 패러다임 전환**을 성공적으로 완료할 수 있었습니다. 특히 OpenAPI 시스템에서는 기존 인프라 익스포터들을 완전히 제거하고 OpenTelemetry 기반으로 전환함으로써 진정한 애플리케이션 레벨 관측성을 확보했습니다.
 
-기술적으로는 ELK에서 Zipkin + Prometheus 조합으로의 스택 변경을 통해 우리 환경에 최적화된 경량화된 솔루션을 구축했으며, 실무적으로는 장애 대응 시간을 **80% 단축**하여 서비스 안정성을 크게 향상시켰습니다.
+**기술적 성과**:
+- **완전한 스택 전환**: Node Exporter, Process Exporter 등 → OpenTelemetry 기반 애플리케이션 계측
+- **관리포인트 최소화**: Grafana → Vue.js 백오피스 통합으로 별도 모니터링 도구 제거
+- **Prometheus 역할 재정의**: 인프라 익스포터 수집기 → OTel Collector의 메트릭 exporter로 전환
 
-무엇보다 중요한 것은 **인프라 레벨에서 애플리케이션 레벨로의 관측성 확장**이 단순한 기술 추가가 아니라 운영 패러다임의 전환을 의미한다는 점입니다. 기존 "서버는 정상인데 왜 느린가?"에서 "어떤 비즈니스 로직에서 병목이 발생하는가?"로 질문의 차원이 바뀌었고, 이를 통해 더욱 정확하고 빠른 장애 대응이 가능해졌습니다.
+**운영 효과**:
+- 장애 대응 시간 **80% 단축** (35분 → 5분)
+- "인프라는 정상인데 왜 느린가?" 문제 해결
+- 백오피스에서 OpenAPI 관리와 모니터링 동시 처리로 업무 효율성 극대화
 
-앞으로도 Node Exporter, MySQLd Exporter 등 검증된 인프라 모니터링을 기반으로 하면서, OpenTelemetry 기반 애플리케이션 관측성을 지속적으로 발전시켜 더욱 안정적이고 신뢰할 수 있는 시스템을 구축해 나가겠습니다.
+**핵심 교훈**:
+무엇보다 중요한 것은 **관측성의 레벨을 올바르게 선택**하는 것입니다. 인프라 레벨 모니터링은 "서버가 살아있는가?"를 답하지만, 애플리케이션 레벨 관측성은 "비즈니스 로직이 제대로 동작하는가?"를 답합니다. OpenAPI처럼 비즈니스 크리티컬한 시스템에서는 후자가 훨씬 중요하며, OpenTelemetry는 이를 위한 최적의 솔루션임을 확인할 수 있었습니다.
+
+앞으로도 이러한 애플리케이션 중심 관측성을 기반으로 더욱 안정적이고 예측 가능한 시스템을 구축해 나가겠습니다.
