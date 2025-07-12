@@ -1,17 +1,17 @@
 ---
-title: OpenTelemetry + ELK 기반 Spring Boot 멀티모듈 관측성 시스템 구축기
-description: 기존 Prometheus 모니터링을 확장한 트레이스 추적 시스템 도입과 스택 변경 여정
+title: OpenAPI 시스템 운영 안정성 강화를 위한 OpenTelemetry 분산 트레이싱 시스템 구축기
+description: 인프라 중심에서 애플리케이션 중심으로의 모니터링 패러다임 전환과 Vue.js 통합 대시보드 구축
 author: backend-engineer
 date: 2024-07-12 14:30:00 +0900
 categories: [Backend, Monitoring]
-tags: [opentelemetry, elk, spring-boot, zipkin, prometheus, observability, microservices]
+tags: [opentelemetry, zipkin, spring-boot, prometheus, observability, microservices, vue.js, openapi]
 pin: true
 math: false
 mermaid: true
 image:
-  path: /assets/img/posts/opentelemetry-architecture.png
+  path: /assets/img/posts/openapi-observability-architecture.png
   lqip: data:image/webp;base64,UklGRpoAAABXRUJQVlA4WAoAAAAQAAAADwAABwAAQUxQSDIAAAARL0AmbZurmr57yyIiqE8oiG0bejIYEQTgqiDA9vqnsUSI6H+oAERp2HZ65qP/VIAWAFZQOCBCAAAA8AEAnQEqEAAIAAVAfCWkAALp8sF8rgRgAP7o9FDvMCkMde9PK7euH5M1m6VWoDXf2FkP3BqV0ZYbO6NA/VFIAAAA
-  alt: OpenTelemetry 기반 관측성 시스템 아키텍처
+  alt: OpenAPI 시스템을 위한 OpenTelemetry 분산 트레이싱 아키텍처
 ---
 
 ## 들어가며
