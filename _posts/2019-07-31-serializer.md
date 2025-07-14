@@ -1,6 +1,6 @@
 ---
 title: Spring Redis 직렬화 방식 분석 및 Jackson2JsonRedisSerializer 선택기 - 멀티모듈 환경에서의 실무 적용
-date: 2025-07-13 11:00:00 +0900
+date: 2023-12-15 11:00:00 +0900
 categories: [Backend, Spring]
 tags: [redis, serialization, jackson, spring-boot, multi-module, msa]
 ---
