@@ -11,7 +11,7 @@ tags: [javascript, file-upload, spring-boot, ajax, formdata, multipartfile, serv
 
 지난 포스팅에서 멀티파일 업로드와 다운로드의 간단한 예를 보였습니다. 서버와의 통신 없이 JavaScript에서만 해결이 가능했습니다.
 
-> **관련 포스팅:** [JavaScript MultiFile Upload, Download (서버X, 파일 개수 제한, 삭제)](/posts/javascript-multifile-upload-download/)
+> **관련 포스팅:** [JavaScript MultiFile Upload, Download (서버X, 파일 개수 제한, 삭제)](/blog/posts/javascript-multifile-upload-download/)
 
 이번에는 **두 가지 핵심 기능**을 구현합니다:
 1. **파일 용량 제한** (Spring Boot Properties 설정)
