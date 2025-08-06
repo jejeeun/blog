@@ -1,19 +1,19 @@
 ---
-title: Spring Redis 직렬화 방식 분석 및 Jackson2JsonRedisSerializer 선택기 - 멀티모듈 환경에서의 실무 적용
+title: Spring Redis 직렬화 방식 비교 및 Jackson2JsonRedisSerializer 선택 이유
 date: 2023-12-15 11:00:00 +0900
 categories: [Backend, Spring]
-tags: [redis, serialization, jackson, spring-boot, multi-module, msa]
+tags: [redis, serialization, jackson, spring-boot, multi-module]
 ---
 
-## 핵심 요약
+## 들어가며
 
-Spring Data Redis에서 제공하는 4가지 직렬화 방식을 실무 관점에서 상세히 분석하고, 멀티모듈 MSA 환경에서 객체 공통 관리와 타입 안전성을 위해 Jackson2JsonRedisSerializer를 선택한 과정과 그 효과를 정리했습니다. 빈 생성 코드가 증가하는 단점이 있지만 @class 메타데이터 제거로 패키지 독립성을 확보하고 컴파일 타임 타입 체크를 통한 안정성을 얻을 수 있었습니다.
+Redis 캐시를 도입하면서 직렬화 방식 선택이 생각보다 복잡했습니다. Spring Data Redis에서 제공하는 여러 직렬화 방식 중 어떤 걸 써야 할지 고민하다가, 각각의 특징을 정리해보고 우리 상황에 맞는 선택을 했던 과정을 공유합니다. 결론적으로 Jackson2JsonRedisSerializer를 선택했는데, 그 이유와 실제 적용 과정을 정리했습니다.
 
-## ⚠️ 문제 상황
+## 상황 정리
 
-### Spring Redis 직렬화 방식 선택의 딜레마
+### 직렬화 방식 선택 고민
 
-Spring Data Redis를 사용할 때 가장 먼저 고민해야 할 부분은 어떤 직렬화 방식을 선택할지입니다. 각 방식마다 명확한 장단점이 있어 프로젝트 특성에 맞는 선택이 필요합니다.
+프로젝트에서 Redis 캐시를 도입하게 되면서 가장 먼저 부딪힌 문제가 직렬화 방식 선택이었습니다. 그냥 대충 넘어가려다가 각 방식의 차이점을 알아보니 생각보다 중요한 선택이더라고요.
 
 ```java
 // Redis Template 설정 시 직렬화 방식 선택 필요
@@ -33,9 +33,9 @@ public RedisTemplate<?, ?> redisTemplate() {
 }
 ```
 
-### 멀티모듈 환경에서의 요구사항
+### 우리 프로젝트 상황
 
-우리 프로젝트는 MSA 구조로 여러 모듈에서 동일한 캐시 데이터를 사용해야 했습니다:
+프로젝트가 멀티모듈 구조로 되어 있어서 여러 모듈에서 같은 캐시 데이터를 공유해야 하는 상황이었습니다:
 
 ```
 project-root/
@@ -48,15 +48,15 @@ project-root/
 │   └── OrderDTO
 ```
 
-**핵심 요구사항:**
-- 여러 서비스에서 동일한 DTO 공유
-- 패키지 경로에 독립적인 캐시 데이터
-- 타입 안전성 보장
-- MSA 서비스 간 결합도 최소화
+**필요했던 것들:**
+- 여러 모듈에서 동일한 DTO 공유
+- 패키지 경로에 의존하지 않는 캐시 데이터
+- 타입 안전성
+- 모듈 간 결합도 최소화
 
-## Spring Redis 직렬화 방식 전체 분석
+## Spring Redis 직렬화 방식 비교
 
-Spring Data Redis에서 제공하는 4가지 직렬화 방식을 실무 관점에서 상세히 분석했습니다.
+Spring Data Redis에서 제공하는 4가지 방식을 하나씩 살펴보겠습니다.
 
 ### 1. JdkSerializationRedisSerializer (기본값)
 
@@ -94,9 +94,9 @@ public class JdkSerializationAnalysis {
 ```
 
 **JDK 직렬화의 문제점:**
-- **클래스 구조 변경 취약성**: 필드 추가/삭제/타입 변경 시 기존 캐시 데이터 무효화
-- **용량 비효율성**: 클래스 메타데이터 포함으로 크기 증가 (2-3배)
-- **가독성 부족**: 바이너리 데이터로 디버깅 어려움
+- 클래스 구조가 조금만 바뀌어도 기존 캐시 데이터 못 읽음
+- 용량이 크고 성능도 별로
+- 바이너리 데이터라서 디버깅할 때 내용을 볼 수 없음
 
 ### 2. GenericJackson2JsonRedisSerializer
 
@@ -142,9 +142,9 @@ public class GenericJacksonAnalysis {
 ```
 
 **GenericJackson2JsonRedisSerializer 문제점:**
-- **패키지 의존성**: @class 필드로 인한 패키지 구조 강제
-- **MSA 확장성 제약**: 서비스별 독립적인 패키지 구조 불가
-- **데이터 크기 증가**: @class 메타데이터로 용량 증가
+- @class 필드 때문에 패키지 경로에 의존하게 됨
+- 서로 다른 서비스에서 패키지 구조가 달라지면 문제 발생
+- @class 메타데이터로 용량 증가
 
 ### 3. Jackson2JsonRedisSerializer
 
@@ -205,9 +205,9 @@ public class Jackson2JsonAnalysis {
 ```
 
 **Jackson2JsonRedisSerializer 특징:**
-- **장점**: @class 메타데이터 없는 깔끔한 JSON, 타입 안전성
+- **장점**: @class 없는 깔끔한 JSON, 타입 안전성
 - **단점**: 타입별로 별도 RedisTemplate 빈 설정 필요
-- **트레이드오프**: 설정 코드 증가 vs 안전성 및 성능
+- **결론**: 설정 코드는 늘어나지만 안전하고 성능도 좋음
 
 ### 4. StringRedisSerializer
 
@@ -249,23 +249,23 @@ public class StringSerializerAnalysis {
 ```
 
 **StringRedisSerializer 특징:**
-- **장점**: 최소 용량, 완전한 타입 독립성, 가장 빠른 속도
+- **장점**: 용량 최소, 완전한 타입 독립성, 속도 빠름
 - **단점**: 수동 JSON 변환 필요, 타입 안전성 부족
-- **적용**: 단순한 캐시 사용, 성능이 최우선인 경우
+- **적용**: 단순한 캐시나 성능이 최우선인 경우
 
-## 실무 결정: Jackson2JsonRedisSerializer 선택
+## 최종 선택: Jackson2JsonRedisSerializer
 
-### 멀티모듈 환경에서의 실제 구현
+### 선택 이유
 
-우리 프로젝트에서는 다음과 같은 이유로 **Jackson2JsonRedisSerializer**를 최종 선택했습니다:
+여러 방식을 비교해본 결과 **Jackson2JsonRedisSerializer**를 선택했습니다:
 
 ```java
 /**
- * 실무 결정: Jackson2JsonRedisSerializer 채택
- * 이유: 멀티모듈 환경에서 객체 공통 관리 + 타입 안전성
+ * Jackson2JsonRedisSerializer 실제 적용
+ * 타입별로 RedisTemplate을 만들어서 사용
  */
 @Configuration
-public class PracticalRedisSerializationConfig {
+public class RedisSerializationConfig {
     
     // 공통 DTO별 전용 RedisTemplate 생성
     @Bean("productRedisTemplate")
@@ -273,7 +273,7 @@ public class PracticalRedisSerializationConfig {
         RedisTemplate<String, ProductDTO> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory());
         
-        // ProductDTO는 common-dto 모듈에서 공유
+        // ProductDTO는 공통 모듈에서 공유
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(new Jackson2JsonRedisSerializer<>(ProductDTO.class));
         template.setHashKeySerializer(new StringRedisSerializer());
@@ -313,17 +313,16 @@ public class PracticalRedisSerializationConfig {
 }
 ```
 
-### 실제 서비스 레이어 적용
+### 실제 사용 예시
 
 ```java
 /**
- * ProductService - Jackson2 RedisTemplate 활용
+ * ProductService에서 실제 사용
  */
 @Service
 @Slf4j
 public class ProductService {
     
-    // 타입별 전용 RedisTemplate 주입
     private final RedisTemplate<String, ProductDTO> productRedisTemplate;
     private final ProductRepository productRepository;
     
@@ -336,24 +335,24 @@ public class ProductService {
     public ProductDTO getProduct(String productId) {
         String cacheKey = "product:" + productId;
         
-        // 타입 안전한 캐시 조회
+        // 캐시에서 조회
         ProductDTO cached = productRedisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
-            log.debug("Cache hit for product: {}", productId);
+            log.debug("캐시에서 조회: {}", productId);
             return cached;
         }
         
         // DB 조회
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
+                .orElseThrow(() -> new EntityNotFoundException("상품 없음: " + productId));
         
         // Entity → DTO 변환
         ProductDTO productDTO = convertToDTO(product);
         
-        // 타입 안전한 캐시 저장
+        // 캐시에 저장
         productRedisTemplate.opsForValue().set(cacheKey, productDTO, Duration.ofHours(1));
         
-        log.info("Product loaded from DB and cached: {}", productId);
+        log.info("DB 조회 후 캐시 저장: {}", productId);
         return productDTO;
     }
     
@@ -366,7 +365,7 @@ public class ProductService {
         String cacheKey = "product:" + productDTO.getProductId();
         productRedisTemplate.delete(cacheKey);
         
-        log.info("Product updated and cache invalidated: {}", productDTO.getProductId());
+        log.info("상품 업데이트 및 캐시 무효화: {}", productDTO.getProductId());
     }
     
     private ProductDTO convertToDTO(Product product) {
@@ -385,40 +384,34 @@ public class ProductService {
 }
 ```
 
-## 성과 및 검증
+## 적용 결과
 
-### 직렬화 방식별 실제 비교 테스트
+### 실제 테스트 해보기
 
 ```java
 @SpringBootTest
-class RealWorldSerializationTest {
+class SerializationTest {
     
     @Test
-    void compareSerializationMethodsWithRealData() {
-        ProductDTO realProduct = createRealWorldProduct();
+    void 직렬화_방식_비교() {
+        ProductDTO testProduct = createTestProduct();
         
-        // 1. GenericJackson2JsonRedisSerializer (기존 고려 방식)
-        SerializationResult genericResult = measureGenericJackson(realProduct);
+        // 1. GenericJackson2JsonRedisSerializer
+        SerializationResult genericResult = testGenericJackson(testProduct);
         
-        // 2. Jackson2JsonRedisSerializer (우리 선택)
-        SerializationResult jackson2Result = measureJackson2(realProduct);
+        // 2. Jackson2JsonRedisSerializer
+        SerializationResult jackson2Result = testJackson2(testProduct);
         
-        // 3. StringRedisSerializer (성능 비교용)
-        SerializationResult stringResult = measureString(realProduct);
-        
-        log.info("실제 상품 데이터 직렬화 비교:");
-        log.info("GenericJackson - 크기: {}bytes, @class: {}", 
+        log.info("Generic Jackson - 크기: {}bytes, @class 포함: {}", 
                 genericResult.getSize(), genericResult.hasClassField());
-        log.info("Jackson2 - 크기: {}bytes, 타입안전: {}", 
+        log.info("Jackson2 - 크기: {}bytes, 타입 안전: {}", 
                 jackson2Result.getSize(), jackson2Result.isTypeSafe());
-        log.info("String - 크기: {}bytes, 수동관리: {}", 
-                stringResult.getSize(), stringResult.isManualManagement());
     }
     
     @Test
-    void verifyPackageIndependence() {
-        // 같은 데이터를 다른 패키지에서 읽을 수 있는지 테스트
-        ProductDTO originalProduct = createRealWorldProduct();
+    void 패키지_독립성_확인() {
+        // @class 필드 없이 잘 동작하는지 테스트
+        ProductDTO originalProduct = createTestProduct();
         
         Jackson2JsonRedisSerializer<ProductDTO> serializer = 
             new Jackson2JsonRedisSerializer<>(ProductDTO.class);
@@ -428,10 +421,9 @@ class RealWorldSerializationTest {
         
         // @class 필드가 없는지 확인
         assertThat(jsonString).doesNotContain("@class");
-        assertThat(jsonString).doesNotContain("com.company");
         
         // 깔끔한 JSON 확인
-        log.info("패키지 독립적 JSON: {}", jsonString);
+        log.info("저장된 JSON: {}", jsonString);
         
         // 역직렬화 성공 확인
         ProductDTO deserialized = serializer.deserialize(serialized);
@@ -439,8 +431,8 @@ class RealWorldSerializationTest {
     }
     
     @Test 
-    void verifyTypesSafety() {
-        // 컴파일 타임 타입 체크 테스트
+    void 타입_안전성_확인() {
+        // 컴파일 타임에 타입 체크가 되는지 확인
         RedisTemplate<String, ProductDTO> productTemplate = new RedisTemplate<>();
         productTemplate.setValueSerializer(new Jackson2JsonRedisSerializer<>(ProductDTO.class));
         
@@ -450,60 +442,40 @@ class RealWorldSerializationTest {
         // 잘못된 타입 할당 시 컴파일 에러 발생
         // productTemplate.opsForValue().set("key", new UserDTO()); // 컴파일 에러!
         
-        log.info("타입 안전성 검증 완료");
+        log.info("타입 안전성 OK");
     }
     
-    private ProductDTO createRealWorldProduct() {
+    private ProductDTO createTestProduct() {
         return ProductDTO.builder()
-                .productId("P12345")
-                .name("Samsung Galaxy S24 Ultra")
-                .description("Latest flagship smartphone")
-                .price(BigDecimal.valueOf(1299.99))
-                .category("Electronics")
-                .stockCount(150)
-                .status(ProductStatus.ACTIVE)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .productId("P001")
+                .name("테스트 상품")
+                .description("테스트용 상품입니다")
+                .price(BigDecimal.valueOf(10000))
+                .category("테스트")
+                .stockCount(100)
                 .build();
     }
 }
 ```
 
-## 핵심 성과
+## 실제 적용 후 느낀 점
 
-### 실무 프로젝트 개선 지표
+### 장점들
+- **타입 안전성**: 컴파일 타임에 타입 체크가 되니까 실수가 줄어듦
+- **디버깅 편의성**: JSON 형태로 저장되어서 Redis CLI로 직접 확인 가능
+- **패키지 독립성**: @class 필드가 없어서 서비스 간 패키지 구조에 의존하지 않음
+- **성능**: @class 메타데이터가 없어서 용량이 줄어듦
 
-```
- 개발 안정성 향상
-├── 캐시 관련 런타임 오류: 월 3-4건 → 0건 (100% 제거)
-├── 디버깅 시간: 평균 50% 단축
-├── 타입 안전성: 컴파일 타임 체크로 보장
-└── 코드 품질: IDE 지원으로 개발자 실수 방지
+### 단점들
+- **설정 번거로움**: DTO 타입마다 RedisTemplate을 만들어야 함
+- **초기 비용**: 처음 설정할 때 코드가 좀 많아짐
 
- MSA 아키텍처 개선
-├── 패키지 독립성: @class 메타데이터 제거로 확보
-├── 서비스 확장성: 새 서비스 추가 시 캐시 호환성 문제 없음
-├── 공통 DTO 관리: common-dto 모듈로 일관성 유지
-└── 결합도 감소: 서비스 간 패키지 의존성 제거
+### 결론
 
- 성능 및 운영성 개선
-├── JSON 크기: 평균 20% 감소 (@class 제거)
-├── 네트워크 트래픽: 15% 감소
-├── 캐시 가독성: JSON 형태로 직접 확인 가능
-└── 장애 대응: 빠른 원인 파악 및 해결
-```
+설정 코드가 조금 늘어나더라도 안정성과 유지보수성을 생각하면 충분히 가치 있는 선택이었다고 생각합니다. 특히 멀티모듈 환경에서는 더욱 그렇네요.
 
-### 선택 정당성 검증
-
-우리가 선택한 **Jackson2JsonRedisSerializer**는 다음과 같은 이유로 최적의 선택이었습니다:
-
-1. **멀티모듈 환경 최적화**: 공통 DTO 사용으로 타입별 설정 부담 최소화
-2. **MSA 아키텍처 지원**: 패키지 독립성으로 서비스 간 결합도 제거
-3. **개발자 경험 향상**: 타입 안전성과 디버깅 편의성 확보
-4. **장기적 유지보수성**: 안정적이고 예측 가능한 시스템 구축
-
-**트레이드오프 결론**: 빈 설정 코드 증가라는 단기적 비용 대비, 안정성과 확장성이라는 장기적 가치가 훨씬 컸습니다.
+다음 글에서는 실제로 구현한 멀티레벨 캐시 아키텍처에 대해 다뤄보겠습니다.
 
 ---
 
-*본 글은 실제 멀티모듈 MSA 프로젝트에서의 Redis 직렬화 방식 선택 경험을 바탕으로 작성되었으며, 구체적인 비교 분석과 실무 적용 과정을 포함합니다.*
+*실제 프로젝트에서 적용한 경험을 바탕으로 작성했습니다.*
