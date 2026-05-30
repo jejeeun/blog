@@ -1,40 +1,43 @@
-<!-- Get 5 last posted/updated posts -->
+{%- comment -%}
+  R8 design — Recent updates with NEW badge (≤7 days), category label, date.
+  Excludes Tech posts (Backend/Frontend/etc.) since Tech has its own tab.
+{%- endcomment -%}
 
 {% assign MAX_SIZE = 5 %}
+{% assign now_seconds = site.time | date: '%s' | plus: 0 %}
+{% assign seven_days = 604800 %}
 
 {% assign all_list = '' | split: '' %}
-
 {% for post in site.posts %}
-  {% assign datetime = post.last_modified_at | default: post.date %}
-
-  {% capture elem %}
-    {{- datetime | date: "%Y%m%d%H%M%S" -}}::{{- forloop.index0 -}}
-  {% endcapture %}
-
-  {% assign all_list = all_list | push: elem %}
+  {% assign cat0 = post.categories[0] %}
+  {% if cat0 == 'Investment' or cat0 == 'Career' %}
+    {% assign datetime = post.last_modified_at | default: post.date %}
+    {% capture elem %}{{- datetime | date: "%Y%m%d%H%M%S" -}}::{{- forloop.index0 -}}{% endcapture %}
+    {% assign all_list = all_list | push: elem %}
+  {% endif %}
 {% endfor %}
-
 {% assign all_list = all_list | sort | reverse %}
 
-{% assign update_list = '' | split: '' %}
-
-{% for entry in all_list limit: MAX_SIZE %}
-  {% assign update_list = update_list | push: entry %}
-{% endfor %}
-
-{% if update_list.size > 0 %}
-  <section id="access-lastmod">
-    <h2 class="panel-heading">{{- site.data.locales[include.lang].panel.lastmod -}}</h2>
-    <ul class="content list-unstyled ps-0 pb-1 ms-1 mt-2">
-      {% for item in update_list %}
-        {% assign index = item | split: '::' | last | plus: 0 %}
-        {% assign post = site.posts[index] %}
-        {% assign url = post.url | relative_url %}
-        <li class="text-truncate lh-lg">
-          <a href="{{ url }}">{{ post.title }}</a>
-        </li>
-      {% endfor %}
-    </ul>
-  </section>
-  <!-- #access-lastmod -->
+{% if all_list.size > 0 %}
+<section id="access-lastmod" class="rp-r8">
+  <h2 class="panel-heading">최근 업데이트</h2>
+  <ul class="rp-r8-list">
+    {% for item in all_list limit: MAX_SIZE %}
+      {% assign index = item | split: '::' | last | plus: 0 %}
+      {% assign post = site.posts[index] %}
+      {% assign url = post.url | relative_url %}
+      {% assign post_seconds = post.date | date: '%s' | plus: 0 %}
+      {% assign age = now_seconds | minus: post_seconds %}
+      {% assign is_new = false %}
+      {% if age <= seven_days %}{% assign is_new = true %}{% endif %}
+      <li>
+        <a href="{{ url }}">
+          {% if is_new %}<span class="rp-r8-new">NEW</span>{% endif %}
+          <span class="rp-r8-title">{{ post.title | remove: '[종목분석] ' }}</span>
+          <span class="rp-r8-meta">{{ post.date | date: '%m.%d' }} · {{ post.categories[1] | default: post.categories[0] }}</span>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
 {% endif %}

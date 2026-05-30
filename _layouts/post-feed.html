@@ -1,0 +1,67 @@
+---
+layout: page
+refactor: true
+---
+
+{% include lang.html %}
+
+{% comment %}
+  Filters posts by front matter:
+    target_category    : show only posts whose categories[0] matches
+    exclude_category   : hide posts whose categories[0] matches
+    exclude_categories : list — hide posts whose categories[0] matches ANY of these
+{% endcomment %}
+
+{% if page.target_category %}
+  {% assign feed_posts = site.posts | where_exp: "p", "p.categories[0] == page.target_category and p.hidden != true" %}
+{% elsif page.exclude_categories %}
+  {% assign feed_posts = '' | split: '' %}
+  {% for p in site.posts %}
+    {% unless p.hidden %}
+      {% assign excluded = false %}
+      {% for excl in page.exclude_categories %}
+        {% if p.categories[0] == excl %}{% assign excluded = true %}{% endif %}
+      {% endfor %}
+      {% unless excluded %}{% assign feed_posts = feed_posts | push: p %}{% endunless %}
+    {% endunless %}
+  {% endfor %}
+{% elsif page.exclude_category %}
+  {% assign feed_posts = site.posts | where_exp: "p", "p.categories[0] != page.exclude_category and p.hidden != true" %}
+{% else %}
+  {% assign feed_posts = site.posts | where_exp: "p", "p.hidden != true" %}
+{% endif %}
+
+{% if page.intro %}
+  <p class="feed-intro">{{ page.intro }}</p>
+{% endif %}
+
+{% if feed_posts.size == 0 %}
+  <div class="empty-card">
+    <p><strong>아직 글이 없습니다.</strong></p>
+    <p class="muted">{{ page.empty_hint | default: '곧 첫 글이 올라옵니다.' }}</p>
+  </div>
+{% else %}
+  <ul class="feed-list">
+    {% for p in feed_posts %}
+      <li class="feed-item">
+        <a class="feed-link" href="{{ p.url | relative_url }}">
+          {% if p.categories[1] %}
+            <span class="feed-cat">{{ p.categories[1] }}</span>
+          {% endif %}
+          <h3 class="feed-title">{{ p.title }}</h3>
+          {% if p.description %}
+            <p class="feed-desc">{{ p.description | strip_html | truncate: 130 }}</p>
+          {% endif %}
+          <div class="feed-meta">
+            <span>{{ p.date | date: '%Y.%m.%d' }}</span>
+            {% if p.tags.size > 0 %}
+              <span class="feed-tags">
+                {% for t in p.tags limit: 4 %}<span class="feed-tag">{{ t }}</span>{% endfor %}
+              </span>
+            {% endif %}
+          </div>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}

@@ -1,0 +1,67 @@
+# 매일 보는 곳 — 홈 랜딩에서 자동 렌더 (_layouts/landing.html)
+# 그룹 추가/항목 추가는 이 파일만 수정하면 됩니다.
+
+groups:
+  - name: 시황 · 시장
+    icon: fas fa-chart-area
+    items:
+      - name: KRX 정보데이터시스템
+        url: https://data.krx.co.kr
+        blurb: KOSPI/KOSDAQ 시세·시총·거래원 raw 데이터
+      - name: 한경 컨센서스
+        url: https://consensus.hankyung.com
+        blurb: 국내 sell-side 리포트 통합 검색
+      - name: FRED (St. Louis Fed)
+        url: https://fred.stlouisfed.org
+        blurb: 미국 금리·매크로 차트의 표준
+      - name: Investing.com
+        url: https://www.investing.com
+        blurb: 글로벌 지수·원자재·경제일정
+
+  - name: 공시 · 재무
+    icon: fas fa-file-lines
+    items:
+      - name: DART 전자공시
+        url: https://dart.fss.or.kr
+        blurb: 국내 상장사 모든 공시 원문
+      - name: KIND
+        url: https://kind.krx.co.kr
+        blurb: 거래소 공시 + 기업개황
+      - name: SEC EDGAR
+        url: https://www.sec.gov/edgar
+        blurb: 미국 상장사 10-K · 10-Q
+      - name: Damodaran Data
+        url: https://pages.stern.nyu.edu/~adamodar/
+        blurb: 산업별 multiples · ERP · 베타 데이터셋
+
+  - name: 리서치 · 메모
+    icon: fas fa-feather-pointed
+    items:
+      - name: Oaktree Memos
+        url: https://www.oaktreecapital.com/insights/memos
+        blurb: Howard Marks의 사이클 메모
+      - name: Berkshire Letters
+        url: https://www.berkshirehathaway.com/letters/letters.html
+        blurb: Buffett 주주 서한 전체 아카이브
+      - name: Musings on Markets
+        url: https://aswathdamodaran.blogspot.com
+        blurb: Damodaran 밸류에이션 블로그
+      - name: Net Interest
+        url: https://www.netinterest.co
+        blurb: Marc Rubinstein · 금융섹터 주간 분석
+
+  - name: 도구 · 데이터
+    icon: fas fa-wrench
+    items:
+      - name: pykrx
+        url: https://github.com/sharebook-kr/pykrx
+        blurb: 한국 주식 데이터 Python 라이브러리
+      - name: OpenDART API
+        url: https://opendart.fss.or.kr
+        blurb: DART 데이터 OpenAPI
+      - name: KIS Open API
+        url: https://apiportal.koreainvestment.com
+        blurb: 한국투자증권 실시간 시세·주문
+      - name: stockanalysis.com
+        url: https://stockanalysis.com
+        blurb: 글로벌 종목 재무·지표 빠른 조회

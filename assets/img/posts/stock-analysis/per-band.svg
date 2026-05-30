@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 360" font-family="'Pretendard','Apple SD Gothic Neo',system-ui,-apple-system,sans-serif">
+  <defs>
+    <linearGradient id="band" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2bb070"/>
+      <stop offset="0.5" stop-color="#e8d36a"/>
+      <stop offset="1" stop-color="#e08a2b"/>
+    </linearGradient>
+    <filter id="pin" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#1b3a2a" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <text x="60" y="58" font-size="31" font-weight="800" fill="#173d2a">PER 5년 밴드에서 지금 어디인가</text>
+  <text x="60" y="92" font-size="19" fill="#7b8a82">과거 5년 동안 PER이 움직인 범위. 현재가 왼쪽일수록 역사적으로 싸다.</text>
+
+  <!-- track -->
+  <rect x="120" y="170" width="760" height="34" rx="17" fill="url(#band)"/>
+
+  <!-- ticks -->
+  <g font-size="17" fill="#5d6b63" text-anchor="middle">
+    <line x1="120" y1="160" x2="120" y2="214" stroke="#cdd8d1" stroke-width="2"/>
+    <text x="120" y="245">하단 8배</text>
+    <line x1="500" y1="160" x2="500" y2="214" stroke="#cdd8d1" stroke-width="2"/>
+    <text x="500" y="245">평균 12배</text>
+    <line x1="880" y1="160" x2="880" y2="214" stroke="#cdd8d1" stroke-width="2"/>
+    <text x="880" y="245">상단 16배</text>
+  </g>
+
+  <!-- bottom labels -->
+  <text x="150" y="300" font-size="18" font-weight="700" fill="#1f9156">싸다</text>
+  <text x="850" y="300" font-size="18" font-weight="700" fill="#d07c1f" text-anchor="end">비싸다</text>
+
+  <!-- current marker at PER 9 (near low) -->
+  <g filter="url(#pin)">
+    <polygon points="215,150 203,128 227,128" fill="#173d2a"/>
+    <rect x="138" y="98" width="154" height="34" rx="8" fill="#173d2a"/>
+  </g>
+  <text x="215" y="120" font-size="17" font-weight="700" fill="#ffffff" text-anchor="middle">현재 9배</text>
+  <circle cx="215" cy="187" r="9" fill="#173d2a" stroke="#ffffff" stroke-width="3"/>
+</svg>

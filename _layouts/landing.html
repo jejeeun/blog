@@ -1,0 +1,79 @@
+---
+layout: default
+refactor: true
+---
+
+{% include lang.html %}
+
+{%- comment -%}
+  최신 Investment 리포트를 "letter"로 피처링.
+  나머지 Investment + Career 글은 아래 평평한 피드로.
+  Tech 카테고리(Backend/Frontend/etc.) 은 별도 Tech 탭에서만 노출.
+{%- endcomment -%}
+{% assign featured = site.posts | where_exp: "p", "p.categories[0] == 'Investment' and p.hidden != true" | first %}
+{% assign content_posts = '' | split: '' %}
+{% for p in site.posts %}
+  {% unless p.hidden %}
+    {% if p.categories[0] == 'Investment' or p.categories[0] == 'Career' %}
+      {% if featured and p.url == featured.url %}{% continue %}{% endif %}
+      {% assign content_posts = content_posts | push: p %}
+    {% endif %}
+  {% endunless %}
+{% endfor %}
+
+<section class="landing-greet">
+  <h1>{{ site.nickname | default: 'jen' }}</h1>
+  <p>equity research notes</p>
+</section>
+
+<section class="landing-ticker">
+  <span><b class="up">+12.4%</b> 누적</span>
+  <span class="sep">·</span>
+  <span><b class="up">+6.8%p</b> vs KOSPI</span>
+  <span class="sep">·</span>
+  <span>샤프 <b>1.42</b></span>
+  <span class="sep">·</span>
+  <span>MDD <b class="down">-4.8%</b></span>
+</section>
+<p style="text-align:center;font-size:.78rem;opacity:.6;margin:.5rem 0 0;">※ 예시 데이터 · 실제 운용 성과 아님</p>
+
+{% if featured %}
+<section class="landing-letter">
+  <div class="letter-meta">최신 리포트 · {{ featured.date | date: '%Y.%m.%d' }}</div>
+  <h2 class="letter-title">
+    <a href="{{ featured.url | relative_url }}">{{ featured.title | remove: '[종목분석] ' }}</a>
+  </h2>
+  <p class="letter-excerpt">{{ featured.description | default: featured.excerpt | strip_html | truncate: 200 }}</p>
+  <a class="letter-more" href="{{ featured.url | relative_url }}">→ 본문 계속 읽기</a>
+</section>
+{% else %}
+<section class="landing-letter empty-letter">
+  <p><strong>첫 리포트 준비 중</strong></p>
+  <p class="letter-excerpt">곧 첫 종목 리포트가 올라옵니다.</p>
+</section>
+{% endif %}
+
+<section class="landing-reads">
+  <h2 class="section-h">리서치 소스</h2>
+  <p class="reads-sub">시장과 기업을 추적할 때 여는 곳들. 직접 추렸습니다.</p>
+  <div class="reads-grid">
+    {% for g in site.data.reading_list.groups %}
+      <div class="reads-group">
+        <div class="reads-group-head">
+          <i class="{{ g.icon }}"></i>
+          <span>{{ g.name }}</span>
+        </div>
+        <ul>
+          {% for it in g.items %}
+            <li>
+              <a href="{{ it.url }}" target="_blank" rel="noopener">
+                <div class="reads-name">{{ it.name }}<i class="fas fa-arrow-up-right-from-square"></i></div>
+                <div class="reads-blurb">{{ it.blurb }}</div>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+  </div>
+</section>

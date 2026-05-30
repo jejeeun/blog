@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 600" font-family="'Pretendard','Apple SD Gothic Neo',system-ui,-apple-system,sans-serif">
+  <defs>
+    <filter id="cardsh" x="-15%" y="-15%" width="130%" height="135%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#3a4a42" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <text x="60" y="56" font-size="33" font-weight="800" fill="#173d2a">PER = 이 회사를 사면 <tspan fill="#1f9156">몇 년이면 본전</tspan>을 뽑나</text>
+  <text x="60" y="92" font-size="20" fill="#7b8a82">주가 ÷ 1년 순이익.  숫자가 작을수록 ‘싸다’.</text>
+
+  <!-- CARD A -->
+  <g filter="url(#cardsh)">
+    <rect x="70" y="135" width="460" height="420" rx="22" fill="#ffffff"/>
+    <path d="M70 157 a22 22 0 0 1 22 -22 h416 a22 22 0 0 1 22 22 v20 h-460 z" fill="#1f9156"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="300" y="168" font-size="22" font-weight="800" fill="#ffffff">회사 A</text>
+    <text x="300" y="232" font-size="21" fill="#3a4a42">주가 <tspan font-weight="700" fill="#1f3a2c">10,000원</tspan></text>
+    <text x="300" y="268" font-size="21" fill="#3a4a42">1년 순이익 <tspan font-weight="700" fill="#1f3a2c">1,000원</tspan></text>
+    <line x1="120" y1="296" x2="480" y2="296" stroke="#eef2ef" stroke-width="2"/>
+    <text x="300" y="330" font-size="16" letter-spacing="2" fill="#9aa8a0">PER</text>
+    <text x="300" y="392" font-size="62" font-weight="800" fill="#1f9156">10</text>
+  </g>
+  <!-- A recovery bar (scale max = 20yr) -->
+  <text x="120" y="438" font-size="16" fill="#7b8a82">본전까지 회수 기간</text>
+  <rect x="120" y="448" width="360" height="20" rx="10" fill="#eef2ef"/>
+  <rect x="120" y="448" width="180" height="20" rx="10" fill="#2bb070"/>
+  <text x="306" y="464" font-size="15" font-weight="700" fill="#1f7a4e">10년</text>
+  <rect x="120" y="500" width="360" height="34" rx="17" fill="#e8f6ee"/>
+  <text x="300" y="523" text-anchor="middle" font-size="18" font-weight="700" fill="#1f9156">상대적으로 싸다 👍</text>
+
+  <!-- CARD B -->
+  <g filter="url(#cardsh)">
+    <rect x="570" y="135" width="460" height="420" rx="22" fill="#ffffff"/>
+    <path d="M570 157 a22 22 0 0 1 22 -22 h416 a22 22 0 0 1 22 22 v20 h-460 z" fill="#e08a2b"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="800" y="168" font-size="22" font-weight="800" fill="#ffffff">회사 B</text>
+    <text x="800" y="232" font-size="21" fill="#3a4a42">주가 <tspan font-weight="700" fill="#1f3a2c">10,000원</tspan></text>
+    <text x="800" y="268" font-size="21" fill="#3a4a42">1년 순이익 <tspan font-weight="700" fill="#1f3a2c">500원</tspan></text>
+    <line x1="620" y1="296" x2="980" y2="296" stroke="#eef2ef" stroke-width="2"/>
+    <text x="800" y="330" font-size="16" letter-spacing="2" fill="#9aa8a0">PER</text>
+    <text x="800" y="392" font-size="62" font-weight="800" fill="#e08a2b">20</text>
+  </g>
+  <text x="620" y="438" font-size="16" fill="#7b8a82">본전까지 회수 기간</text>
+  <rect x="620" y="448" width="360" height="20" rx="10" fill="#eef2ef"/>
+  <rect x="620" y="448" width="360" height="20" rx="10" fill="#eaa64e"/>
+  <text x="966" y="464" text-anchor="end" font-size="15" font-weight="700" fill="#b9731c">20년</text>
+  <rect x="620" y="500" width="360" height="34" rx="17" fill="#fdf2e3"/>
+  <text x="800" y="523" text-anchor="middle" font-size="18" font-weight="700" fill="#d07c1f">상대적으로 비싸다 👎</text>
+</svg>

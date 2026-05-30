@@ -24,3 +24,13 @@ package-lock.json
 
 # Misc
 assets/js/dist
+
+# 개인 문서 · 작업 노트 · 로컬 전용 (공개 레포에 올리지 않음)
+CLAUDE.md
+CAREER_PAGE_BRIEF.md
+preview.md
+themes.md
+_config_dev.yml
+Makefile
+tools/
+_drafts/

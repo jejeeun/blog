@@ -36,7 +36,8 @@ layout: compress
           <aside aria-label="Panel" id="panel-wrapper" class="col-xl-3 ps-2 text-muted">
             <div class="access">
               {% include_cached update-list.html lang=lang %}
-              {% include_cached trending-tags.html lang=lang %}
+              {%- comment -%} 인기태그 패널 제거 — 카테고리·태그 메타 메뉴 제거 방침과 일관 {%- endcomment -%}
+              {%- comment -%} {% include_cached trending-tags.html lang=lang %} {%- endcomment -%}
             </div>
 
             {% for _include in layout.panel_includes %}
